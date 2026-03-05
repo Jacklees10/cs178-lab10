@@ -4,7 +4,7 @@
 # proposed score: 0 (out of 5) -- if I don't change this, I agree to get 0 points.
 
 import boto3
-
+from boto3.dynamodb.conditions import Attr
 # boto3 uses the credentials configured via `aws configure` on EC2
 REGION = "us-east-1"
 TABLE_NAME = "Movies"
@@ -90,11 +90,26 @@ def delete_movie():
 
 
 def query_movie():
-    """
-    Prompt user for a Movie Title.
-    Print out the average of all ratings in the movie's Ratings list.
-    """
-    print("query movie")
+    table = get_table()
+    title = input("What is the movie title? ")
+
+    response = table.scan(
+        FilterExpression=Attr("Title").eq(title)
+    )
+    items = response.get("Items", [])
+
+    if not items:
+        print("movie not found")
+        return
+
+    ratings = items[0].get("Ratings", [])
+
+    if not ratings:
+        print("movie has no ratings")
+        return
+
+    avg = sum(float(r) for r in ratings) / len(ratings)
+    print(f"Average rating for '{title}': {avg:.2f}")
 
 def print_menu():
     print("----------------------------")
