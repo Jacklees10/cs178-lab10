@@ -1,4 +1,4 @@
-# name: YOUR NAME HERE
+# name: Ben Jackels
 # date:
 # description: Implementation of CRUD operations with DynamoDB — CS178 Lab 10
 # proposed score: 0 (out of 5) -- if I don't change this, I agree to get 0 points.
@@ -6,21 +6,67 @@
 import boto3
 
 # boto3 uses the credentials configured via `aws configure` on EC2
-dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
-table = dynamodb.Table('Movies')
+REGION = "us-east-1"
+TABLE_NAME = "Movies"
+
+def get_table():
+    """Return a reference to the DynamoDB Movies table."""
+    dynamodb = boto3.resource("dynamodb", region_name=REGION)
+    return dynamodb.Table(TABLE_NAME)
 
 def create_movie():
     """
     Prompt user for a Movie Title.
     Add the movie to the database with the title and an empty Ratings list.
     """
-    print("creating a movie")
+    table = get_table()
+
+    title = input("Enter movie title: ").strip()
+    year = input("Enter movie year: ").strip()
+    genre = input("Enter movie genre: ").strip()
+
+    table.put_item(
+        Item={
+            "Title": title,
+            "Year": year,
+            "Genre": genre,
+            "Ratings": []
+        }
+    )
+    print(f"Movie '{title}' added successfully!")
+
+def print_movie(movie):
+    """Print a single movie's details in a readable format."""
+    title = movie.get("Title", "Unknown Title")
+    year = movie.get("Year", "Unknown Year")
+    
+    # Ratings is a nested map in the table — handle it gracefully
+    ratings = movie.get("Ratings", "No ratings")
+    # rating_str = ", ".join(f"{k}: {v}" for k, v in ratings.items()) if ratings else "No ratings"
+    genre = movie.get("Genre", "Unknown Genre")
+
+    print(f"  Title : {title}")
+    print(f"  Year  : {year}")
+    print(f"  Ratings: {ratings}")
+    print(f"  Genre  : {genre}")
 
 def print_all_movies():
-    """
-    Display all movies in the database.
-    """
-    print("display all movies")
+    """Scan the entire Movies table and print each item."""
+    table = get_table()
+    
+    # scan() retrieves ALL items in the table.
+    # For large tables you'd use query() instead — but for our small
+    # dataset, scan() is fine.
+    response = table.scan()
+    items = response.get("Items", [])
+    
+    if not items:
+        print("No movies found. Make sure your DynamoDB table has data.")
+        return
+    
+    print(f"Found {len(items)} movie(s):\n")
+    for movie in items:
+        print_movie(movie)
 
 def update_rating():
     """
